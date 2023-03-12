@@ -58,8 +58,26 @@ class Xackport_OT_op(Operator):
         return {'FINISHED'}
 
     @staticmethod
-    def export(context):
-        bpy.ops.export_scene.gltf(filepath=bpy.path.abspath(context.scene.placeholder.export_path), check_existing=False, export_format='GLB', use_selection=False)        
+    def export(context):        
+        bpy.ops.object.select_all(action='DESELECT')
+        print("exporting")
+        for o in bpy.data.objects:
+            if not o.visible_get(view_layer=bpy.context.view_layer):
+                continue
+            col = o.instance_collection
+            if col is not None and col.name == "Cutter":
+                print("found cutter, skipping")
+                continue
+            bpy.context.view_layer.objects.active = o
+            for mod in o.modifiers:
+                if not mod.is_active:
+                    continue
+                print("applying modifier " + mod.name + " for " + o.name)
+                bpy.ops.object.modifier_apply(modifier=mod.name)
+            o.select_set(True)
+            print("selecting " + o.name)
+        print("finished export")
+        bpy.ops.export_scene.gltf(filepath=bpy.path.abspath(context.scene.placeholder.export_path), check_existing=False, export_format='GLB', use_selection=True)        
 
 def register():
     bpy.utils.register_class(Xackport_PT_panel)
