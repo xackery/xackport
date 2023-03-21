@@ -2,11 +2,12 @@ import bpy
 from bpy.props import StringProperty, EnumProperty, PointerProperty
 from bpy.types import Operator, Panel, PropertyGroup, Scene
 from bpy.utils import register_class, unregister_class
+import os
 
 bl_info = {
     "name": "Xackport",
     "author": "xackery",
-    "version" : (1, 0),
+    "version" : (1, 1),
     "blender" : (3, 4, 0),
     "location" : "View3D > Xackport",
     "category" : "Export Settings",
@@ -58,7 +59,20 @@ class Xackport_OT_op(Operator):
         return {'FINISHED'}
 
     @staticmethod
-    def export(context):        
+    def export(context):
+        if not bpy.context.active_object.mode == "OBJECT":
+            bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.object.select_all(action='DESELECT')
+        filepath = bpy.path.abspath(context.scene.placeholder.export_path)
+        export_format = "GLB"
+        if not filepath.find("."):
+            filepath += ".glb"
+        if filepath.endswith(".gltf"):
+            export_format = "GLTF_EMBEDDED"
+        
+        if not os.path.exists(os.path.dirname(filepath)):        
+            filepath = os.path.dirname(bpy.data.filepath) + "/" + filepath
+
         bpy.ops.object.select_all(action='DESELECT')
         print("exporting")
         for o in bpy.data.objects:
@@ -68,6 +82,8 @@ class Xackport_OT_op(Operator):
             if col is not None and col.name == "Cutter":
                 print("found cutter, skipping")
                 continue
+            if not o.type == "MESH":
+                continue            
             bpy.context.view_layer.objects.active = o
             for mod in o.modifiers:
                 if not mod.is_active:
@@ -77,7 +93,7 @@ class Xackport_OT_op(Operator):
             o.select_set(True)
             print("selecting " + o.name)
         print("finished export")
-        bpy.ops.export_scene.gltf(filepath=bpy.path.abspath(context.scene.placeholder.export_path), check_existing=False, export_format='GLB', use_selection=True)        
+        bpy.ops.export_scene.gltf(filepath=filepath, check_existing=False, export_format=export_format, use_selection=True)        
 
 def register():
     bpy.utils.register_class(Xackport_PT_panel)
